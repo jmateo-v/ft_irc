@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: dogs <dogs@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/03/23 13:13:45 by dogs             ###   ########.fr       */
+/*   Updated: 2026/03/24 19:12:42 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <cstring>
 #include <vector>
+#include <cerrno>
 #include "Server.hpp"
 
 Server::Server(int port, const std::string& password)
@@ -90,12 +91,66 @@ void Server::startPollLoop()
         for (size_t i = 0; i < pollfds.size(); ++i)
         {
             if (pollfds[i].revents & POLLIN)
-            {
+            {   
                 if (pollfds[i].fd == _serverFd)
                 {
-                    std::cout << "Something attempted connection o algo\n";
-                    //accept logic goes here
+                    while (true)
+                    {
+                        int clientFd = accept(_serverFd, NULL, NULL);
+                        if (clientFd < 0)
+                        {
+                            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                                break;
+                            if (errno == EINTR)
+                                continue;
+                            throw std::runtime_error(std::string("Failed to accept connection: ") +
+                            std::strerror(errno));
+                        }
+                    
+                        makeNonBlocking(clientFd);
+
+                        pollfd clientPfd;
+                        clientPfd.fd = clientFd;
+                        clientPfd.events = POLLIN;
+                        clientPfd.revents = 0;
+                        pollfds.push_back(clientPfd);
+                    
+                        std::cout << "Client connected on fd " << clientFd << "\n";
+                    }
                 }
+                else
+                {
+                    int clientFd = pollfds[i].fd;
+                    char buffer[512];
+                    ssize_t bytes = recv(clientFd, buffer, sizeof(buffer), 0);
+                    if (bytes < 0)
+                    {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK)
+                            continue;
+                        if (errno == EINTR)
+                            continue;
+                        disconnectClient(pollfds, i);
+                        i--;
+                        continue;
+                    }
+                    if (bytes == 0)
+                    {
+                        disconnectClient(pollfds, i);
+                        --i;
+                        continue;
+                    }
+                    if (bytes > 0)
+                    {
+                        //This will do something ig
+                        std::cout << "dogs\n";
+                    }
+                }
+            }
+            else if(pollfds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
+            {
+                disconnectClient(pollfds, i);
+                --i;
+                continue;
             }
         }
     }
@@ -108,6 +163,14 @@ void Server::makeNonBlocking(int fd)
         throw std::runtime_error("Failed to retrieve socket flags");
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
         throw std::runtime_error("Failed to set socket flags");
+}
+void Server::disconnectClient(std::vector<pollfd>& pollfds, size_t index)
+{
+    int fd = pollfds[index].fd;
+    std::cout << "Client " << fd << " disconnected\n";
+
+    close(fd);
+    pollfds.erase(pollfds.begin() + index);
 }
 
 void Server::run()
