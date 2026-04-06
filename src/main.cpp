@@ -6,13 +6,14 @@
 /*   By: dogs <dogs@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 11:37:40 by dogs              #+#    #+#             */
-/*   Updated: 2026/03/19 13:49:43 by dogs             ###   ########.fr       */
+/*   Updated: 2026/03/27 11:55:26 by dogs             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <signal.h>
 #include "Server.hpp"
 
 int main(int argc, char **argv)
@@ -26,6 +27,7 @@ int main(int argc, char **argv)
     std::string password = argv[2];
     try
     {
+        signal(SIGPIPE, SIG_IGN);
         Server server(port, password);
         server.run();
     }
