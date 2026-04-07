@@ -8,10 +8,12 @@ OBJ_DIR = obj
 
 INCLUDES = -I includes
 
-SRCS = src/main.cpp \
-	   src/server/Server.cpp
+SRCS = src/main.cpp\
+	   src/server/Server.cpp\
+	   src/client/Client.cpp
 
-HDRS = includes/Server.hpp
+HDRS = includes/Server.hpp\
+	includes/Server.hpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 

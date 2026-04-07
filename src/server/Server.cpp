@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/03/24 19:12:42 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/07 17:35:31 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 #include <cstring>
 #include <vector>
 #include <cerrno>
+#include <sstream>
 #include "Server.hpp"
 
 Server::Server(int port, const std::string& password)
@@ -48,7 +49,7 @@ void Server::createSocket()
     int opt = 1;
     if (setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
         throw std::runtime_error(std::string("Failed to set SO_REUSEADDR: ") +
-        std::strerror(errno));;
+        std::strerror(errno));
 }
 void Server::bindSocket()
 {
@@ -108,14 +109,15 @@ void Server::startPollLoop()
                         }
                     
                         makeNonBlocking(clientFd);
-
+                        Client* client = new Client(clientFd, "localhost", _password);
+                        _clients[clientFd] = client;
+                        std::cout << "Client connected on fd " << clientFd << "\n";
+                        
                         pollfd clientPfd;
                         clientPfd.fd = clientFd;
                         clientPfd.events = POLLIN;
                         clientPfd.revents = 0;
                         pollfds.push_back(clientPfd);
-                    
-                        std::cout << "Client connected on fd " << clientFd << "\n";
                     }
                 }
                 else
@@ -141,10 +143,36 @@ void Server::startPollLoop()
                     }
                     if (bytes > 0)
                     {
-                        //This will do something ig
-                        std::cout << "dogs\n";
+                        Client& client = getClient(clientFd);
+                        client.appendRecv(buffer, bytes);
+                        while (client.hasLine())
+                        {
+                            std::string line = client.extractLine();
+                            std::cout << "CMD: " << line << std::endl;
+
+                            //hardcoded client
+                            client.setPassOk();
+                            client.setNick("tester");
+                            client.setUser("Dog", "Unnamed");
+                            client.tryRegister();
+                            short events = POLLIN;
+                            if (client.hasPendingSend())
+                                events |= POLLOUT;
+                            pollfds[i].events = events;
+                        }
                     }
                 }
+            }
+            else if(pollfds[i].revents & POLLOUT)
+            {
+                Client& client = getClient(pollfds[i].fd);
+                std::cout << "POLLOUT ready for fd " << pollfds[i].fd << std::endl;
+                client.send();
+
+                short events = POLLIN;
+                if (client.hasPendingSend())
+                    events |= POLLOUT;
+                pollfds[i].events = events;
             }
             else if(pollfds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
             {
@@ -169,8 +197,23 @@ void Server::disconnectClient(std::vector<pollfd>& pollfds, size_t index)
     int fd = pollfds[index].fd;
     std::cout << "Client " << fd << " disconnected\n";
 
+    Client* client = _clients[fd];
+    delete client;
+    _clients.erase(fd);
+
     close(fd);
     pollfds.erase(pollfds.begin() + index);
+}
+Client& Server::getClient(int fd)
+{
+    std::map<int, Client*>::iterator it = _clients.find(fd);
+    if (it == _clients.end())
+    {
+        std::ostringstream oss;
+        oss << "Client not found for fd" << fd;
+        throw std::runtime_error(oss.str());
+    }
+    return *it->second;
 }
 
 void Server::run()
