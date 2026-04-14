@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: dogs <dogs@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 11:37:40 by dogs              #+#    #+#             */
-/*   Updated: 2026/03/27 11:55:26 by dogs             ###   ########.fr       */
+/*   Updated: 2026/04/14 16:44:52 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <signal.h>
 #include "Server.hpp"
+#include "SignalHandler.hpp"
 
 int main(int argc, char **argv)
 {
@@ -25,10 +26,11 @@ int main(int argc, char **argv)
     }
     int port = std::atoi(argv[1]);
     std::string password = argv[2];
+    setup_signals();
+    signal(SIGPIPE, SIG_IGN);
     try
     {
-        signal(SIGPIPE, SIG_IGN);
-        Server server(port, password);
+        Server server(port, password, shutdownFlag);
         server.run();
     }
     catch(const std::exception &e)

@@ -10,17 +10,22 @@ INCLUDES = -I includes
 
 SRCS = src/main.cpp\
 	   src/server/Server.cpp\
-	   src/client/Client.cpp
+	   src/server/ServerCommands.cpp\
+	   src/client/Client.cpp\
+	   src/utils/MessageParser.cpp\
+	   src/utils/SignalHandler.cpp
 
 HDRS = includes/Server.hpp\
-	includes/Server.hpp
+	includes/Client.hpp\
+	includes/MessageParser.hpp\
+	includes/SignalHandler.hpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(OBJS) -o $(NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HDRS)
 	mkdir -p $(dir $@)

@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/07 17:35:31 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/14 16:53:44 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,11 +24,12 @@
 #include <sstream>
 #include "Server.hpp"
 
-Server::Server(int port, const std::string& password)
-    : _port(port), _password(password), _serverFd(-1)
+Server::Server(int port, const std::string& password, volatile sig_atomic_t& flag)
+    : _port(port), _password(password), _serverFd(-1), _shutdownFlag(flag)
 {
     if (_port < 1 || _port > 65535)
         throw std::runtime_error("Invalid port: must be between 1 and 65535");
+    initCommands();
 }
 Server::~Server()
 {
@@ -79,7 +80,7 @@ void Server::startPollLoop()
     serverPfd.revents = 0;
     pollfds.push_back(serverPfd);
 
-    while (true)
+    while (_shutdownFlag == 0)
     {
         int ret = poll(pollfds.data(), pollfds.size(), -1);
         if (ret < 0)
@@ -148,13 +149,28 @@ void Server::startPollLoop()
                         while (client.hasLine())
                         {
                             std::string line = client.extractLine();
-                            std::cout << "CMD: " << line << std::endl;
+                            std::cout << "RAW CMD: " << line << std::endl;
 
-                            //hardcoded client
-                            client.setPassOk();
-                            client.setNick("tester");
-                            client.setUser("Dog", "Unnamed");
-                            client.tryRegister();
+                            Message msg = MessageParser::parseMSG(line);
+                            //DEBUGSLOP STARTS HERE
+                            if (!msg.command.empty())
+                            {
+                                std::cout << "✓ VALID - Command: '" << msg.command << "' | "
+                                << "Prefix: '" << msg.prefix << "' | "
+                                << "Params (" << msg.params.size() << "): [";
+                                for (size_t j = 0; j < msg.params.size(); ++j)
+                                {
+                                    std::cout << "'" << msg.params[j] << "'";
+                                    if (j < msg.params.size() - 1) std::cout << ", ";
+                                }
+                                std::cout << "]" << std::endl;
+                                dispatchCommand(client, msg);
+                            }
+                            else
+                            {
+                                std::cout << "✗ INVALID MSG (too long/empty)" << std::endl;
+                            }
+                            //DEBUGSLOP STOPS HERE
                             short events = POLLIN;
                             if (client.hasPendingSend())
                                 events |= POLLOUT;
@@ -182,10 +198,18 @@ void Server::startPollLoop()
             }
         }
     }
+    std::cout << "Shutdown: Disconnecting " << pollfds.size()-1 << " clients...\n";
+    
+    for (int i = pollfds.size() - 1; i > 0; --i)
+        disconnectClient(pollfds, i);
+    pollfds.clear();
+    _clients.clear();
+    std::cout << "Cleanup complete\n";
 }
 
 void Server::makeNonBlocking(int fd)
 {
+    //MIGHT NEED TO CHECK IF THIS IS ALLOWED
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1)
         throw std::runtime_error("Failed to retrieve socket flags");
@@ -214,6 +238,25 @@ Client& Server::getClient(int fd)
         throw std::runtime_error(oss.str());
     }
     return *it->second;
+}
+void Server::initCommands()
+{
+    //INITIALIZE FUTURE COMMANDS
+    _cmdMap["PASS"] = &Server::handlePass;
+    _cmdMap["NICK"] = &Server::handleNick;
+    _cmdMap["USER"] = &Server::handleUser;
+}
+
+void Server::dispatchCommand(Client& client, const Message& msg)
+{
+    std::map<std::string, CmdFunc>::iterator it = _cmdMap.find(msg.command);
+    if (it != _cmdMap.end())
+    {
+        std::cout << "Dispatching: " << msg.command << std::endl;
+        (this->*(it->second))(client, msg.params);
+    }
+    else
+        std::cout << "Unknown: " << msg.command << std::endl;
 }
 
 void Server::run()

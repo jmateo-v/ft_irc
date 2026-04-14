@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/27 11:39:31 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/07 17:24:55 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/14 15:25:47 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #define CLIENT_HPP
 
 #include <string>
+#include <sys/types.h>
 
 class Client
 {
