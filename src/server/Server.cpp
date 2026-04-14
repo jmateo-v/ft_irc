@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/14 16:53:44 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/14 17:58:12 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -239,26 +239,6 @@ Client& Server::getClient(int fd)
     }
     return *it->second;
 }
-void Server::initCommands()
-{
-    //INITIALIZE FUTURE COMMANDS
-    _cmdMap["PASS"] = &Server::handlePass;
-    _cmdMap["NICK"] = &Server::handleNick;
-    _cmdMap["USER"] = &Server::handleUser;
-}
-
-void Server::dispatchCommand(Client& client, const Message& msg)
-{
-    std::map<std::string, CmdFunc>::iterator it = _cmdMap.find(msg.command);
-    if (it != _cmdMap.end())
-    {
-        std::cout << "Dispatching: " << msg.command << std::endl;
-        (this->*(it->second))(client, msg.params);
-    }
-    else
-        std::cout << "Unknown: " << msg.command << std::endl;
-}
-
 void Server::run()
 {
     createSocket();

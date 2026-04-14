@@ -18,7 +18,8 @@ SRCS = src/main.cpp\
 HDRS = includes/Server.hpp\
 	includes/Client.hpp\
 	includes/MessageParser.hpp\
-	includes/SignalHandler.hpp
+	includes/SignalHandler.hpp\
+	includes/replies.hpp
 
 OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 

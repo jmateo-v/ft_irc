@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 14:22:32 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/07 17:44:22 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/14 17:47:32 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <poll.h>
 #include "Client.hpp"
+#include "replies.hpp"
 
 Client::Client(int fd, const std::string& hostname, const std::string& password)
 : _fd(fd), _hostname(hostname), _password(password),
@@ -133,12 +134,11 @@ bool Client::tryRegister()
 	if (!_passOk || !_nickSet || !_userSet)
 		return false;
 	_registered = true;
-	//ILL IMPLEMENT THE PROPER HELPERS LATER, PERCHANCE 
 	
-	appendSend(":localhost 001 " + _nickname + " :Welcome to the IRC network!");
-	appendSend(":localhost 002 " + _nickname + " :Your host is <host>, running ircd-42");
-	appendSend(":localhost 003 " + _nickname + " :This server was created <date>");
-	appendSend(":localhost 004 " + _nickname + " localhost ircd-42 <max_nick> <supported flags>");
+	rpl_welcome(_fd, _nickname, _username, _hostname);
+	rpl_yourhost(_fd, _nickname);
+	rpl_created(_fd, _nickname);
+	rpl_myinfo(_fd, _nickname);
 
 	std::cout << "Client " << _fd << " REGISTERED: " << getPrefix() << std::endl;
 	return true;
