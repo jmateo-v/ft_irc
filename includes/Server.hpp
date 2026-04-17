@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:28:40 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/14 16:44:39 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/17 15:54:47 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,10 +29,10 @@ public:
 
     void run();
 private:
-
     int _port;
     std::string _password;
     int _serverFd;
+    std::vector<pollfd> _pollFds;
     std::map <int, Client*> _clients;
     typedef void (Server::*CmdFunc)(Client&, const std::vector<std::string>&);
     std::map<std::string, CmdFunc>   _cmdMap;
@@ -42,8 +42,13 @@ private:
     void bindSocket();
     void listenSocket();
     void startPollLoop();
+    void handleServerEvent();
+    void handleClientReadEvent(size_t i);
+    void handleClientWriteEvent(size_t i);
+    void handleClientErrorEvent(size_t i);
+    void exitLoopCleanup();
     void makeNonBlocking(int fd);
-    void disconnectClient(std::vector<pollfd>& pollfds, size_t index);
+    void disconnectClient(size_t index);
     Client& getClient(int fd);
     void initCommands();
     void dispatchCommand(Client& client, const Message& msg);
@@ -51,7 +56,6 @@ private:
     void handlePass(Client& client, const std::vector<std::string>& params);
     void handleNick(Client& client, const std::vector<std::string>& params);
     void handleUser(Client& client, const std::vector<std::string>& params);
-
 };
 
 #endif

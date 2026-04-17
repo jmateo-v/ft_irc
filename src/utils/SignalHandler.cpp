@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 16:31:00 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/14 16:41:36 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/17 15:25:53 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@ volatile sig_atomic_t shutdownFlag = 0;
 extern "C" void signal_handler(int, siginfo_t*, void*)
 {
 	shutdownFlag = 1;
-	const char msg[] = "Shutting down...\n";
+	const char msg[] = "\nShutting down...\n";
 	write(STDERR_FILENO, msg, sizeof(msg)-1);
 }
 void setup_signals()

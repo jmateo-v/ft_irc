@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/14 17:58:12 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/17 16:01:07 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,8 @@
 #include "Server.hpp"
 
 Server::Server(int port, const std::string& password, volatile sig_atomic_t& flag)
-    : _port(port), _password(password), _serverFd(-1), _shutdownFlag(flag)
+    : _port(port), _password(password), _serverFd(-1),
+    _pollFds(), _shutdownFlag(flag)
 {
     if (_port < 1 || _port > 65535)
         throw std::runtime_error("Invalid port: must be between 1 and 65535");
@@ -73,16 +74,15 @@ void Server::listenSocket()
 
 void Server::startPollLoop()
 {
-    std::vector<pollfd> pollfds;
     pollfd serverPfd;
     serverPfd.fd = _serverFd;
     serverPfd.events = POLLIN;
     serverPfd.revents = 0;
-    pollfds.push_back(serverPfd);
+    _pollFds.push_back(serverPfd);
 
     while (_shutdownFlag == 0)
     {
-        int ret = poll(pollfds.data(), pollfds.size(), -1);
+        int ret = poll(_pollFds.data(), _pollFds.size(), -1);
         if (ret < 0)
         {
             if (errno == EINTR)
@@ -90,135 +90,145 @@ void Server::startPollLoop()
             throw std::runtime_error(std::string("poll failed: ") +
             std::strerror(errno));
         }
-        for (size_t i = 0; i < pollfds.size(); ++i)
+        for (size_t i = 0; i < _pollFds.size(); ++i)
         {
-            if (pollfds[i].revents & POLLIN)
+            if (_pollFds[i].revents & POLLIN)
             {   
-                if (pollfds[i].fd == _serverFd)
+                if (_pollFds[i].fd == _serverFd)
                 {
-                    while (true)
-                    {
-                        int clientFd = accept(_serverFd, NULL, NULL);
-                        if (clientFd < 0)
-                        {
-                            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                                break;
-                            if (errno == EINTR)
-                                continue;
-                            throw std::runtime_error(std::string("Failed to accept connection: ") +
-                            std::strerror(errno));
-                        }
-                    
-                        makeNonBlocking(clientFd);
-                        Client* client = new Client(clientFd, "localhost", _password);
-                        _clients[clientFd] = client;
-                        std::cout << "Client connected on fd " << clientFd << "\n";
-                        
-                        pollfd clientPfd;
-                        clientPfd.fd = clientFd;
-                        clientPfd.events = POLLIN;
-                        clientPfd.revents = 0;
-                        pollfds.push_back(clientPfd);
-                    }
+                   handleServerEvent();
+                   continue;
                 }
-                else
-                {
-                    int clientFd = pollfds[i].fd;
-                    char buffer[512];
-                    ssize_t bytes = recv(clientFd, buffer, sizeof(buffer), 0);
-                    if (bytes < 0)
-                    {
-                        if (errno == EAGAIN || errno == EWOULDBLOCK)
-                            continue;
-                        if (errno == EINTR)
-                            continue;
-                        disconnectClient(pollfds, i);
-                        i--;
-                        continue;
-                    }
-                    if (bytes == 0)
-                    {
-                        disconnectClient(pollfds, i);
-                        --i;
-                        continue;
-                    }
-                    if (bytes > 0)
-                    {
-                        Client& client = getClient(clientFd);
-                        client.appendRecv(buffer, bytes);
-                        while (client.hasLine())
-                        {
-                            std::string line = client.extractLine();
-                            std::cout << "RAW CMD: " << line << std::endl;
-
-                            Message msg = MessageParser::parseMSG(line);
-                            //DEBUGSLOP STARTS HERE
-                            if (!msg.command.empty())
-                            {
-                                std::cout << "✓ VALID - Command: '" << msg.command << "' | "
-                                << "Prefix: '" << msg.prefix << "' | "
-                                << "Params (" << msg.params.size() << "): [";
-                                for (size_t j = 0; j < msg.params.size(); ++j)
-                                {
-                                    std::cout << "'" << msg.params[j] << "'";
-                                    if (j < msg.params.size() - 1) std::cout << ", ";
-                                }
-                                std::cout << "]" << std::endl;
-                                dispatchCommand(client, msg);
-                            }
-                            else
-                            {
-                                std::cout << "✗ INVALID MSG (too long/empty)" << std::endl;
-                            }
-                            //DEBUGSLOP STOPS HERE
-                            short events = POLLIN;
-                            if (client.hasPendingSend())
-                                events |= POLLOUT;
-                            pollfds[i].events = events;
-                        }
-                    }
-                }
+                handleClientReadEvent(i);
             }
-            else if(pollfds[i].revents & POLLOUT)
+            else if(_pollFds[i].revents & POLLOUT)
+                handleClientWriteEvent(i);
+            else if(_pollFds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
             {
-                Client& client = getClient(pollfds[i].fd);
-                std::cout << "POLLOUT ready for fd " << pollfds[i].fd << std::endl;
-                client.send();
-
-                short events = POLLIN;
-                if (client.hasPendingSend())
-                    events |= POLLOUT;
-                pollfds[i].events = events;
-            }
-            else if(pollfds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
-            {
-                disconnectClient(pollfds, i);
-                --i;
+                handleClientErrorEvent(i);
                 continue;
             }
         }
     }
-    std::cout << "Shutdown: Disconnecting " << pollfds.size()-1 << " clients...\n";
-    
-    for (int i = pollfds.size() - 1; i > 0; --i)
-        disconnectClient(pollfds, i);
-    pollfds.clear();
+    exitLoopCleanup();
+}
+void Server::handleServerEvent()
+{
+    while (true)
+    {
+        int clientFd = accept(_serverFd, NULL, NULL);
+            if (clientFd < 0)
+            {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    break;
+                if (errno == EINTR)
+                    continue;
+                throw std::runtime_error(std::string("Failed to accept connection: ") +
+                std::strerror(errno));
+            }
+                    
+            makeNonBlocking(clientFd);
+            Client* client = new Client(clientFd, "localhost", _password);
+            _clients[clientFd] = client;
+             std::cout << "Client connected on fd " << clientFd << "\n";
+                        
+            pollfd clientPfd;
+            clientPfd.fd = clientFd;
+            clientPfd.events = POLLIN;
+            clientPfd.revents = 0;
+            _pollFds.push_back(clientPfd);
+    }
+}
+void Server::handleClientReadEvent(size_t i)
+{
+    int clientFd = _pollFds[i].fd;
+    char buffer[512];
+    ssize_t bytes = recv(clientFd, buffer, sizeof(buffer), 0);
+
+    if (bytes < 0)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+        if (errno == EINTR)
+            return;
+        disconnectClient(i);
+        return;
+    }
+    if (bytes == 0)
+    {
+        disconnectClient(i);
+        return;
+    }
+    if (bytes > 0)
+    {
+        Client& client = getClient(clientFd);
+        client.appendRecv(buffer, bytes);
+
+        while (client.hasLine())
+        {
+            std::string line = client.extractLine();
+            //DEBUGSLOP STARTS HERE
+            std::cout << "RAW CMD: " << line << std::endl;
+
+            Message msg = MessageParser::parseMSG(line);
+            if (!msg.command.empty())
+            {
+                std::cout << "✓ VALID - Command: '" << msg.command << "' | "
+                    << "Prefix: '" << msg.prefix << "' | "
+                    << "Params (" << msg.params.size() << "): [";
+                for (size_t j = 0; j < msg.params.size(); ++j)
+                {
+                    std::cout << "'" << msg.params[j] << "'";
+                    if (j < msg.params.size() - 1) std::cout << ", ";
+                }
+                std::cout << "]" << std::endl;
+                dispatchCommand(client, msg);
+            }
+            else
+            {
+                std::cout << "✗ INVALID MSG (too long/empty)" << std::endl;
+            }
+            //DEBUGSLOP STOPS HERE
+            short events = POLLIN;
+            if (client.hasPendingSend())
+                events |= POLLOUT;
+            _pollFds[i].events = events;
+        }
+    }
+}
+void Server::handleClientWriteEvent(size_t i)
+{
+    Client& client = getClient(_pollFds[i].fd);
+    std::cout << "POLLOUT ready for fd " << _pollFds[i].fd << std::endl;
+    client.send();
+
+    short events = POLLIN;
+    if (client.hasPendingSend())
+        events |= POLLOUT;
+    _pollFds[i].events = events;
+}
+void Server::handleClientErrorEvent(size_t i)
+{
+    disconnectClient(i);
+    --i;
+}
+void Server::exitLoopCleanup()
+{
+    std::cout << "Shutdown: Disconnecting " << _pollFds.size() - 1 << " clients...\n";
+    for (int i = _pollFds.size() - 1; i > 0; --i)
+        disconnectClient(i);
+    _pollFds.clear();
     _clients.clear();
     std::cout << "Cleanup complete\n";
 }
-
 void Server::makeNonBlocking(int fd)
 {
-    //MIGHT NEED TO CHECK IF THIS IS ALLOWED
-    int flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1)
-        throw std::runtime_error("Failed to retrieve socket flags");
-    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-        throw std::runtime_error("Failed to set socket flags");
+    if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+        throw std::runtime_error("Failed to set socket non-blocking");
 }
-void Server::disconnectClient(std::vector<pollfd>& pollfds, size_t index)
+void Server::disconnectClient(size_t index)
 {
-    int fd = pollfds[index].fd;
+    int fd = _pollFds[index].fd;
     std::cout << "Client " << fd << " disconnected\n";
 
     Client* client = _clients[fd];
@@ -226,7 +236,7 @@ void Server::disconnectClient(std::vector<pollfd>& pollfds, size_t index)
     _clients.erase(fd);
 
     close(fd);
-    pollfds.erase(pollfds.begin() + index);
+    _pollFds.erase(_pollFds.begin() + index);
 }
 Client& Server::getClient(int fd)
 {
