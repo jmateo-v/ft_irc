@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 15:20:14 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/14 18:24:25 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/17 16:15:42 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,10 @@ void Server::dispatchCommand(Client& client, const Message& msg)
         (this->*(it->second))(client, msg.params);
     }
     else
+	{
         std::cout << "Unknown: " << msg.command << std::endl;
+		err_unknowncommand(client.getFd(), client.getNick().empty() ? "*" : client.getNick(), msg.command);
+	}
 }
 void Server::handlePass(Client& client, const std::vector<std::string>& params)
 {

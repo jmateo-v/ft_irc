@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/17 16:01:07 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/17 16:06:18 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -167,28 +167,9 @@ void Server::handleClientReadEvent(size_t i)
         while (client.hasLine())
         {
             std::string line = client.extractLine();
-            //DEBUGSLOP STARTS HERE
-            std::cout << "RAW CMD: " << line << std::endl;
-
             Message msg = MessageParser::parseMSG(line);
             if (!msg.command.empty())
-            {
-                std::cout << "✓ VALID - Command: '" << msg.command << "' | "
-                    << "Prefix: '" << msg.prefix << "' | "
-                    << "Params (" << msg.params.size() << "): [";
-                for (size_t j = 0; j < msg.params.size(); ++j)
-                {
-                    std::cout << "'" << msg.params[j] << "'";
-                    if (j < msg.params.size() - 1) std::cout << ", ";
-                }
-                std::cout << "]" << std::endl;
                 dispatchCommand(client, msg);
-            }
-            else
-            {
-                std::cout << "✗ INVALID MSG (too long/empty)" << std::endl;
-            }
-            //DEBUGSLOP STOPS HERE
             short events = POLLIN;
             if (client.hasPendingSend())
                 events |= POLLOUT;

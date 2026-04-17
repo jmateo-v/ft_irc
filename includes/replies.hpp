@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 17:17:27 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/14 18:01:59 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/17 16:13:55 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,6 +60,10 @@ inline void rpl_myinfo(int fd, const std::string& nick)
 }
 
 //ERRORS 
+inline void err_unknowncommand(int fd, const std::string& nick, const std::string& cmd)
+{
+    sendNumeric(fd, 421, nick + " " + cmd + " :Unknown command");
+}
 inline void err_nonicknamegiven(int fd, const std::string& nick)
 {
     sendNumeric(fd, 431, nick + " :No nickname given");
