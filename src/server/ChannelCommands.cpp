@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/24 14:24:03 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/24 16:09:58 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 18:44:52 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,14 +49,18 @@ void Server::handleJoin(Client& client, const std::vector<std::string>& params)
 			err_inviteonlychan(client.getFd(), client.getNick(), channelName);
 		else if (!channel->getChannelPasswd().empty())
 			err_badchannelkey(client.getFd(), client.getNick(), channelName);
+		else if (static_cast<int>(channel->getMemberCount()) >= channel->getUserLimit())
+			err_channelisfull(client.getFd(), client.getNick(), channelName);
 		else
 			err_useronchannel(client.getFd(), client.getNick(), channelName);
-		//member limit would go here ig
 		return;
 	}
+	std::string symbol = (channelName[0] == '#') ? "=" : "*";
 	//Broadcast join
-	//rpl_topic(do later on when topic exists 332)
-	//rpl_namreply (member list 353 and 366)
+	if (!channel->getChannelTopic().empty())
+		rpl_topic(client.getFd(), client.getNick(), channelName, channel->getChannelTopic());
+	rpl_namreply(client.getFd(), symbol, channelName, channel->getPrefixedNicks());
+	rpl_endofnames(client.getFd(), client.getNick(), channelName);
 }
 void Server::handlePart(Client& client, const std::vector<std::string>& params)
 {

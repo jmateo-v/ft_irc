@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:28:40 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/24 15:39:33 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 18:52:19 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,9 @@ private:
     void makeNonBlocking(int fd);
     void disconnectClient(size_t index);
     Client& getClient(int fd);
+    bool isValidNick(const std::string& nick);
+    bool isValidUser(const std::string& user);
+    Client* findClientByNick(const std::string& nick);
     Channel* findChannel(const std::string& name);
     void initCommands();
     void dispatchCommand(Client& client, const Message& msg);

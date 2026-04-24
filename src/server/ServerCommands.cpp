@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 15:20:14 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/24 15:39:11 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 18:58:12 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,11 @@ void Server::dispatchCommand(Client& client, const Message& msg)
 }
 void Server::handlePass(Client& client, const std::vector<std::string>& params)
 {
+	if (client.isRegistered())
+	{
+		err_alreadyregistered(client.getFd(), client.getNick());
+		return;
+	}
 	if (params.empty())
 	{
 		err_needmoreparams(client.getFd(), client.getNick().empty() ? "*" : client.getNick(), "PASS");
@@ -66,19 +71,29 @@ void Server::handleNick(Client& client, const std::vector<std::string>& params)
 		return;
 	}
 	std::string newnick = params[0];
-	if (newnick.empty() || newnick.size() > 9) //should implement an isValid()
+	if (!isValidNick(newnick))
 	{
 		err_erroneusnickname(client.getFd(), client.getNick().empty() ? "*" : client.getNick(), newnick);
 		return;
 	}
-	//CHECK FOR DUPE NICK LATER
-	//ERROR 433 goes here
+	if (findClientByNick(newnick))
+	{
+		err_nicknameinuse(client.getFd(), newnick);
+		return;
+	}
 	client.setNick(newnick);
-	client.tryRegister();
-	//ERROR 462 logic for already registering
+	if (client.isRegistered())
+		; //broadcast here nick change
+	else
+		client.tryRegister();
 }
 void Server::handleUser(Client& client, const std::vector<std::string>& params)
 {
+	if (client.isRegistered())
+	{
+		err_alreadyregistered(client.getFd(), client.getNick());
+		return;
+	}
 	if (params.size() < 4)
 	{
 		err_needmoreparams(client.getFd(), client.getNick().empty() ? "*" : client.getNick(), "USER");
@@ -87,9 +102,9 @@ void Server::handleUser(Client& client, const std::vector<std::string>& params)
 	std::string username = params[0];
 	std::string realname = params[3];
 
-	if(username.empty() || username.size() > 10)
+	if(!isValidUser(username))
 	{
-		err_needmoreparams(client.getFd(), client.getNick().empty() ? "*" : client.getNick(), "USER");
+		err_erroneususername(client.getFd(),"*", username);
 		return;
 	}
 	client.setUser(username, realname);

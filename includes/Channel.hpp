@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/17 17:13:10 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/24 16:36:14 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 17:47:39 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,7 @@ public:
 	const std::string& getChannelPasswd() const;
 	bool isInviteOnly() const;
 	size_t getMemberCount() const;
+	std::string getPrefixedNicks() const;
 	void setChannelTopic(const std::string& topic, Client* setter);
 	void setPassword(const std::string& password, Client* setter);
 	void setInviteOnly(bool inviteOnly, Client* setter);

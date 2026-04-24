@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/24 16:22:41 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 18:53:06 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -236,6 +236,43 @@ Client& Server::getClient(int fd)
         throw std::runtime_error(oss.str());
     }
     return *it->second;
+}
+bool Server::isValidNick(const std::string& nick)
+{
+    if (nick.empty() || nick.size() > 9)
+        return false;
+    if (!isalpha(static_cast<unsigned char>(nick[0])))
+        return false;
+    
+    for (std::string::size_type i = 0; i < nick.size(); ++i)
+    {
+        char c = nick[i];
+        if (!isalnum(static_cast<unsigned char>(c)) && 
+            c != '-' && c != '_' && c != '[' && c != ']' && 
+            c != '{' && c != '}' && c != '\\' && c != '|')
+            return false;
+    }
+    return true;
+}
+bool Server::isValidUser(const std::string& user)
+{
+    if (user.empty() || user.size() > 10)
+        return false;
+    for (std::string::size_type i = 0; i < user.size(); ++i)
+    {
+        if (!isalnum(user[i]) && user[i] != '-' && user[i] != '_' && 
+            user[i] != '.' && user[i] != '~')
+                return false;
+    }
+    return true;
+}
+Client* Server::findClientByNick(const std::string& nick)
+{
+    std::map<int, Client*>::iterator it;
+    for (it = _clients.begin(); it != _clients.end(); ++it)
+        if (it->second->getNick() == nick)
+            return it->second;
+    return NULL;
 }
 
 Channel* Server::findChannel(const std::string& name)
