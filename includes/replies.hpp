@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 17:17:27 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/17 16:13:55 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 16:09:51 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,7 +59,12 @@ inline void rpl_myinfo(int fd, const std::string& nick)
 	sendNumeric(fd, 4, msg);
 }
 
-//ERRORS 
+//ERRORS
+inline void err_nosuchchannel(int fd, const std::string& nick, const std::string& channel)
+{
+    sendNumeric(fd, 404, nick + " " + channel + " :Cannot send to channel");
+}
+
 inline void err_unknowncommand(int fd, const std::string& nick, const std::string& cmd)
 {
     sendNumeric(fd, 421, nick + " " + cmd + " :Unknown command");
@@ -79,6 +84,21 @@ inline void err_nicknameinuse(int fd, const std::string& nick)
     sendNumeric(fd, 433, nick + " :Nickname is already in use");
 }
 
+inline void err_notonchannel(int fd, const std::string& nick, const std::string& channel)
+{
+    sendNumeric(fd, 442, nick + " " + channel + " :You're not on that channel");
+}
+
+inline void err_useronchannel(int fd, const std::string& nick, const std::string& channel)
+{
+    sendNumeric(fd, 443, nick + " " + channel + " :is already on channel");
+}
+
+inline void err_notregistered(int fd, const std::string& nick)
+{
+    sendNumeric(fd, 451, nick + " :You have not registered");
+}
+
 inline void err_needmoreparams(int fd, const std::string& nick, const std::string& cmd)
 {
     sendNumeric(fd, 461, nick + " " + cmd + " :Not enough parameters");
@@ -92,5 +112,15 @@ inline void err_alreadyregistered(int fd, const std::string& nick)
 inline void err_passwdmismatch(int fd, const std::string& nick)
 {
     sendNumeric(fd, 464, nick + " :Password incorrect");
+}
+
+inline void err_inviteonlychan(int fd, const std::string& nick, const std::string& channel)
+{
+    sendNumeric(fd, 473, nick + " " + channel + " :Cannot join channel (+i)");
+}
+
+inline void err_badchannelkey(int fd, const std::string& nick, const std::string& channel)
+{
+    sendNumeric(fd, 475, nick + " " + channel + " :Cannot join channel (+k)");
 }
 #endif

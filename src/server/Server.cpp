@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/17 16:06:18 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 16:22:41 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,13 @@ Server::Server(int port, const std::string& password, volatile sig_atomic_t& fla
 }
 Server::~Server()
 {
+    for (std::map<std::string, Channel*>::iterator it = _channels.begin(); 
+         it != _channels.end(); ++it)
+    {
+        delete it->second;
+    }
+    _channels.clear();
+    
     if (_serverFd != -1)
     {
         std::cout << "Debug: Closing socket with fd " << _serverFd << "\n";
@@ -229,6 +236,14 @@ Client& Server::getClient(int fd)
         throw std::runtime_error(oss.str());
     }
     return *it->second;
+}
+
+Channel* Server::findChannel(const std::string& name)
+{
+    std::map<std::string, Channel*>::iterator it = _channels.find(name);
+    if (it != _channels.end())
+        return it->second;
+    return NULL;
 }
 void Server::run()
 {

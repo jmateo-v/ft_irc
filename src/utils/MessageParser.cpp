@@ -6,12 +6,13 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 14:26:04 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/14 14:44:23 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 16:54:16 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "MessageParser.hpp"
 #include <sstream>
+#include <cctype>
 
 void split_params(const std::string& s, std::vector<std::string>& params)
 {
@@ -34,11 +35,16 @@ Message MessageParser::parseMSG(const std::string& raw)
 	size_t cmd_start = has_prefix ? line.find(' ', 1) + 1 : 0;
 	if (cmd_start == std::string::npos)
 		cmd_start = 0;
+
 	size_t cmd_end = line.find(' ', cmd_start);
 	if (cmd_end == std::string::npos)
 		cmd_end = line.size();
-	msg.command = line.substr(cmd_start, cmd_end - cmd_start);
-
+	
+	std::string cmd_raw = line.substr(cmd_start, cmd_end - cmd_start);
+	msg.command.clear();
+	std::string::const_iterator it;
+	for (it = cmd_raw.begin(); it != cmd_raw.end(); ++it)
+    	msg.command += std::toupper(static_cast<unsigned char>(*it));
 	std::string param_part = (cmd_end < line.size()) ? line.substr(cmd_end + 1) : "";
 	size_t trail_pos = param_part.rfind(" :");
 	if (trail_pos != std::string::npos)

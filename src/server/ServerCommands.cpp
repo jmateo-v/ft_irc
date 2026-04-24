@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 15:20:14 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/17 16:15:42 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 15:39:11 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,8 @@ void Server::initCommands()
     _cmdMap["PASS"] = &Server::handlePass;
     _cmdMap["NICK"] = &Server::handleNick;
     _cmdMap["USER"] = &Server::handleUser;
+	_cmdMap["JOIN"] = &Server::handleJoin;
+	_cmdMap["PART"] = &Server::handlePart;
 }
 
 void Server::dispatchCommand(Client& client, const Message& msg)
@@ -54,7 +56,6 @@ void Server::handlePass(Client& client, const std::vector<std::string>& params)
 	{
 		err_passwdmismatch(client.getFd(), client.getNick().empty() ? "*" : client.getNick());
 		std::cout << "Pass wrong " << client.getFd() << std::endl;
-		//maybe disconnect idk
 	}
 }
 void Server::handleNick(Client& client, const std::vector<std::string>& params)

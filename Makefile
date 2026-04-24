@@ -11,7 +11,9 @@ INCLUDES = -I includes
 SRCS = src/main.cpp\
 	   src/server/Server.cpp\
 	   src/server/ServerCommands.cpp\
+	   src/server/ChannelCommands.cpp\
 	   src/client/Client.cpp\
+	   src/channel/Channel.cpp\
 	   src/utils/MessageParser.cpp\
 	   src/utils/SignalHandler.cpp
 

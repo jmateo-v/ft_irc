@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/17 17:34:05 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/17 18:12:20 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 16:47:23 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,9 @@
 Channel::Channel(std::string name)
 : _name(name), _topic(""), _password(""),
   _members(), _operators(),
-  _invited(), _inviteOnly(false)
+  _invited(), _inviteOnly(false),
+  _topicLocked(true), _passwordSet(false),
+  _userLimit(0)
 {}
 Channel::~Channel()
 {}
@@ -33,6 +35,10 @@ size_t Channel::getMemberCount() const
 bool Channel::isOperator(Client* client) const
 {
     return std::find(_operators.begin(), _operators.end(), client) != _operators.end();
+}
+bool Channel::hasMember(Client* client) const
+{
+    return std::find(_members.begin(), _members.end(), client) != _members.end();
 }
 void Channel::setChannelTopic(const std::string& topic, Client* setter)
 {
@@ -67,4 +73,49 @@ bool Channel::addMember(Client* client, std::string password)
 	if (_operators.empty())
 		_operators.push_back(client);
 	return true;
+}
+bool Channel::removeMember(Client* client)
+{
+    std::vector<Client*>::iterator memberIt = std::find(_members.begin(), _members.end(), client);
+    if (memberIt != _members.end())
+        _members.erase(memberIt);
+    else
+		return false;
+    std::vector<Client*>::iterator opIt = std::find(_operators.begin(), _operators.end(), client);
+    if (opIt != _operators.end())
+        _operators.erase(opIt);
+	else
+		return false;
+    
+    _invited.erase(client);
+    return true;
+}
+bool Channel::isTopicLocked() const
+{return _topicLocked;}
+
+bool Channel::hasPassword() const
+{return _passwordSet;}
+
+int Channel::getUserLimit() const
+{return _userLimit;}
+
+void Channel::setTopicLocked(bool locked, Client* setter)
+{
+	if (!isOperator(setter))
+		return;
+	_topicLocked = locked;
+}
+void Channel::setUserLimit(int limit, Client* setter)
+{
+    if (!isOperator(setter))
+		return;
+    _userLimit = (limit > 0) ? limit : 0;
+}
+std::string Channel::getModeString() const
+{
+    std::string modes = "t";
+    if (_inviteOnly) modes += "i";
+    if (_passwordSet) modes += "k";
+    if (_userLimit > 0) modes += "l";
+    return modes;
 }
