@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/14 17:17:27 by jmateo-v          #+#    #+#             */
-/*   Updated: 2026/04/24 18:57:12 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/04/24 19:05:53 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,7 +101,7 @@ inline void err_nicknameinuse(int fd, const std::string& nick)
 {
     sendNumeric(fd, 433, nick + " :Nickname is already in use");
 }
-void err_erroneususername(int fd, const std::string& nick, const std::string& user)
+inline void err_erroneususername(int fd, const std::string& nick, const std::string& user)
 {
     sendNumeric(fd, 441, nick + " " + user + " :Erroneous username");
 }
