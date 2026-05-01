@@ -6,7 +6,7 @@
 /*   By: jmateo-v <jmateo-v@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/19 12:40:32 by dogs              #+#    #+#             */
-/*   Updated: 2026/04/24 18:53:06 by jmateo-v         ###   ########.fr       */
+/*   Updated: 2026/05/01 14:28:27 by jmateo-v         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -121,15 +121,11 @@ void Server::startPollLoop()
 }
 void Server::handleServerEvent()
 {
-    while (true)
-    {
         int clientFd = accept(_serverFd, NULL, NULL);
             if (clientFd < 0)
             {
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    break;
-                if (errno == EINTR)
-                    continue;
+                if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+                    return;
                 throw std::runtime_error(std::string("Failed to accept connection: ") +
                 std::strerror(errno));
             }
@@ -144,7 +140,6 @@ void Server::handleServerEvent()
             clientPfd.events = POLLIN;
             clientPfd.revents = 0;
             _pollFds.push_back(clientPfd);
-    }
 }
 void Server::handleClientReadEvent(size_t i)
 {
@@ -166,11 +161,13 @@ void Server::handleClientReadEvent(size_t i)
         disconnectClient(i);
         return;
     }
+    // std::string received(buffer, buffer + bytes); //uncomment to show evaluator partial commands
+    // std::cout << "Received " << bytes << " bytes from fd " << clientFd //uncomment to show evaluator partial commands
+    //     << ": [" << received << "]" << std::endl; //uncomment to show evaluator partial commands
     if (bytes > 0)
     {
         Client& client = getClient(clientFd);
         client.appendRecv(buffer, bytes);
-
         while (client.hasLine())
         {
             std::string line = client.extractLine();
